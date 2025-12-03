@@ -24,7 +24,11 @@ HYDRATION_TIPS = [
     "Eat water-rich foods like watermelon and cucumber."
 ]
 
-DATA_FILE = "water_log.txt"   # simple text-file history
+DATA_FILE = "water_log.txt"          # per-day intake history
+PROFILE_FILE = "water_profile.txt"   # XP + level profile
+
+XP_PER_ML_DIVISOR = 10   # gained_xp = amount // 10
+XP_PER_LEVEL = 500       # each level per 500 XP
 
 
 # ===================== STATE INIT / FILE I/O =====================
@@ -42,6 +46,12 @@ def init_state():
         st.session_state.data_loaded = False
     if "_ask_reset" not in st.session_state:
         st.session_state._ask_reset = False
+    if "xp" not in st.session_state:
+        st.session_state.xp = 0
+    if "level" not in st.session_state:
+        st.session_state.level = 1
+    if "last_xp_gain" not in st.session_state:
+        st.session_state.last_xp_gain = 0
 
 
 def load_today_from_file():
@@ -124,6 +134,33 @@ def load_history():
     return history
 
 
+def load_profile():
+    """Load XP + level from PROFILE_FILE."""
+    if not os.path.exists(PROFILE_FILE):
+        return
+    try:
+        with open(PROFILE_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                if k == "xp":
+                    st.session_state.xp = int(v)
+                elif k == "level":
+                    st.session_state.level = int(v)
+    except Exception:
+        # if profile file is corrupted, ignore and keep defaults
+        pass
+
+
+def save_profile():
+    """Persist XP + level."""
+    with open(PROFILE_FILE, "w", encoding="utf-8") as f:
+        f.write(f"xp={st.session_state.xp}\n")
+        f.write(f"level={st.session_state.level}\n")
+
+
 # ===================== CORE LOGIC =====================
 
 def recalc_goal_from_age():
@@ -147,17 +184,34 @@ def set_manual_goal(new_goal_str: str):
         st.error("Enter a positive integer for goal (ml).")
 
 
+def add_xp_from_amount(amount: int):
+    """Gamification: convert water amount to XP and update level."""
+    gained = max(0, amount // XP_PER_ML_DIVISOR)
+    st.session_state.last_xp_gain = gained
+    if gained == 0:
+        return
+    st.session_state.xp += gained
+    old_level = st.session_state.level
+    st.session_state.level = 1 + st.session_state.xp // XP_PER_LEVEL
+    save_profile()
+    if st.session_state.level > old_level:
+        st.balloons()
+        st.success(f"Level up! You reached Level {st.session_state.level} 🎉")
+
+
 def add_water(amount: int):
-    """Add water, update file."""
+    """Add water, update file and XP."""
     if amount <= 0:
         return
     st.session_state.total_ml += amount
+    add_xp_from_amount(amount)
     save_today_to_file()
 
 
 def reset_day():
-    """Reset today’s progress but keep history file."""
+    """Reset today’s progress but keep history + XP."""
     st.session_state.total_ml = 0
+    st.session_state.last_xp_gain = 0
     save_today_to_file()
 
 
@@ -185,10 +239,7 @@ def motivational_message(percent: float) -> str:
 
 
 def mascot_state(percent: float):
-    """
-    Replace Turtle mascot with simple emoji + description
-    (Neutral / Smile / Wave / Celebrate).
-    """
+    """Neutral / Smile / Wave / Celebrate (emoji)."""
     if percent < 50:
         return "😐", "Mascot: Neutral (keep going!)"
     elif percent < 75:
@@ -207,11 +258,9 @@ def compute_history_stats(history: dict):
     if not history:
         return 0, None, 0, 0.0, 0, 0.0
 
-    # sort dates ascending
     dates = sorted(history.keys())
     total_days = len(dates)
 
-    # completion info
     completed = 0
     total_litres = 0.0
     best_intake = 0
@@ -228,9 +277,8 @@ def compute_history_stats(history: dict):
 
     completion_rate = completed / total_days * 100.0
 
-    # streak: consecutive days with goal met up to the most recent date
+    # streak = consecutive days with goal met starting from latest date backwards
     streak = 0
-    # Walk backwards from latest date
     last_date = datetime.date.fromisoformat(dates[-1])
     current = last_date
     date_set = set(dates)
@@ -256,7 +304,7 @@ def apply_dark_mode():
             """
             <style>
             .stApp {
-                background-color: #0f172a;
+                background-color: #020617;
                 color: #f9fafb;
             }
             .block-container {
@@ -293,6 +341,7 @@ def main():
 
     if not st.session_state.data_loaded:
         load_today_from_file()
+        load_profile()
         st.session_state.data_loaded = True
 
     apply_dark_mode()
@@ -301,7 +350,6 @@ def main():
     with st.sidebar:
         st.markdown("## ⚙️ Settings")
 
-        # Feature 1: Goal Selection (Age group + manual)
         st.markdown("#### Age Group")
         new_age = st.selectbox(
             "Select Age Group",
@@ -313,7 +361,7 @@ def main():
             st.session_state.age_group = new_age
             recalc_goal_from_age()
             save_today_to_file()
-            st.experimental_rerun()
+            st.rerun()
 
         st.markdown("#### Daily Goal (ml)")
         goal_input = st.text_input(
@@ -326,7 +374,6 @@ def main():
 
         st.markdown("---")
 
-        # Feature 5: Reset function (with confirmation)
         if st.button("🗓️ New Day / Reset"):
             st.session_state._ask_reset = True
 
@@ -337,19 +384,17 @@ def main():
                 if st.button("✅ Yes"):
                     reset_day()
                     st.session_state._ask_reset = False
-                    st.experimental_rerun()
+                    st.rerun()
             with c2:
                 if st.button("❌ No"):
                     st.session_state._ask_reset = False
-                    st.experimental_rerun()
+                    st.rerun()
 
         st.markdown("---")
 
-        # Hydration tip
         if st.button("💡 Hydration Tip"):
             st.info(random.choice(HYDRATION_TIPS))
 
-        # Dark mode toggle
         st.markdown("---")
         st.session_state.dark_mode = st.checkbox(
             "🌙 Dark Mode", value=st.session_state.dark_mode
@@ -357,28 +402,42 @@ def main():
         apply_dark_mode()
 
     # ---------- MAIN LAYOUT ----------
-    # Header
     st.markdown(
         """
         <h1 style='margin-bottom:0'>💧 WaterBuddy</h1>
         <p style='margin-top:4px;font-size:0.95rem;opacity:0.75'>
-        Daily hydration companion with goals, history & progress insights.
+        Daily hydration companion with goals, history, XP and progress insights.
         </p>
         """,
         unsafe_allow_html=True,
     )
 
-    # Progress calculations
+    # Progress + XP calculations
     goal, total, remaining, percent = compute_progress()
+    xp = st.session_state.xp
+    level = st.session_state.level
+    xp_prev_level = (level - 1) * XP_PER_LEVEL
+    xp_next_level = level * XP_PER_LEVEL
+    xp_into_level = xp - xp_prev_level
+    xp_level_span = XP_PER_LEVEL
+    xp_progress = xp_into_level / xp_level_span if xp_level_span else 0.0
 
-    # Top stats row
-    top1, top2, top3, top4 = st.columns(4)
+    # Top stats row (now includes level)
+    top0, top1, top2, top3, top4 = st.columns(5)
+    top0.metric("Level", level, help="Each level = 500 XP")
     top1.metric("Daily Goal", f"{goal} ml")
     top2.metric("Drank Today", f"{total} ml")
     top3.metric("Remaining", f"{remaining} ml")
     top4.metric("Progress", f"{percent:.1f} %")
 
     st.progress(min(1.0, percent / 100.0))
+
+    # XP bar
+    st.markdown("##### XP Progress")
+    st.progress(min(1.0, xp_progress))
+    st.caption(
+        f"XP: {xp}  |  Level {level}  |  {xp_into_level} / {XP_PER_LEVEL} XP to next level"
+    )
 
     # Mascot + message row
     col_mascot, col_msg = st.columns([1, 2])
@@ -403,16 +462,16 @@ def main():
         b1, b2, b3, b4 = st.columns(4)
         if b1.button("+100 ml"):
             add_water(100)
-            st.experimental_rerun()
+            st.rerun()
         if b2.button("+250 ml"):
             add_water(250)
-            st.experimental_rerun()
+            st.rerun()
         if b3.button("+500 ml"):
             add_water(500)
-            st.experimental_rerun()
+            st.rerun()
         if b4.button("+1 L"):
             add_water(1000)
-            st.experimental_rerun()
+            st.rerun()
 
     with c_custom:
         st.markdown("**Custom amount**")
@@ -421,7 +480,11 @@ def main():
         )
         if st.button("Add Custom"):
             add_water(int(custom_amt))
-            st.experimental_rerun()
+            st.rerun()
+
+    # Show last XP gain under the logging section
+    if st.session_state.last_xp_gain > 0:
+        st.caption(f"⭐ You earned +{st.session_state.last_xp_gain} XP for that drink!")
 
     st.markdown("---")
 
@@ -446,12 +509,10 @@ def main():
     else:
         st.caption("Start logging to unlock streaks and stats.")
 
-    # Graph + table
     with st.expander("📅 View Hydration History (Chart & Table)", expanded=False):
         if not history:
             st.write("No history yet. Drink some water and it will be saved automatically.")
         else:
-            # Build DataFrame
             rows = []
             for d, (t, g) in sorted(history.items()):
                 rows.append({"date": d, "intake_ml": t, "goal_ml": g})
@@ -466,7 +527,8 @@ def main():
             st.dataframe(df.sort_values("date", ascending=False), use_container_width=True)
 
             st.caption(
-                f"History is stored locally in `{DATA_FILE}` (simple text file, no login or cloud DB)."
+                f"History is stored locally in `{DATA_FILE}` and profile in `{PROFILE_FILE}` "
+                f"(simple text files, no login or cloud DB)."
             )
 
 
