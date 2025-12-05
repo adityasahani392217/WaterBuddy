@@ -31,8 +31,10 @@ XP_PER_LEVEL = 500
 # ---------- file helpers (multi-profile) ----------
 
 def get_profile_suffix() -> str:
-    name = st.session_state.profile_name
-    return name.replace(" ", "_").lower()
+    if "profile_name" in st.session_state:
+        name = st.session_state.profile_name
+        return name.replace(" ", "_").lower()
+    return "default"
 
 def get_data_file() -> str:
     return f"water_log_{get_profile_suffix()}.txt"
@@ -543,7 +545,7 @@ def apply_dark_mode():
                 color: #ffffff !important;
             }
             
-            /* TARGET METRICS SPECIFICALLY */
+            /* TARGET METRICS SPECIFICALLY FOR DARK MODE */
             [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
                 color: #ffffff !important;
             }
@@ -578,7 +580,7 @@ def apply_dark_mode():
                 color: #000000 !important;
             }
             
-            /* TARGET METRICS SPECIFICALLY */
+            /* FORCE METRICS TO BLACK - FIX FOR INVISIBLE TEXT */
             [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
                 color: #000000 !important;
             }
