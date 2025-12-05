@@ -529,111 +529,115 @@ def draw_turtle_image(percent: float) -> Image.Image:
 
 # ===================== DARK MODE + BUTTON COLORS =====================
 
+# ===================== DARK MODE + BUTTON COLORS =====================
+
 def apply_dark_mode():
+    # ------------------ DARK MODE ------------------
     if st.session_state.dark_mode:
         st.markdown(
             """
             <style>
-            /* MAIN BACKGROUND - DARK */
+            /* MAIN APP BACKGROUND */
             .stApp {
                 background-color: #0e1117;
-                color: #ffffff;
             }
             
-            /* FORCE TEXT COLORS TO WHITE */
-            h1, h2, h3, h4, h5, h6, p, li, span, div, label, input {
+            /* GLOBAL TEXT COLOR */
+            h1, h2, h3, h4, h5, h6, p, li, span, div, label, input, .stMarkdown {
                 color: #ffffff !important;
             }
             
-            /* TARGET METRICS SPECIFICALLY FOR DARK MODE */
-            [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
-                color: #ffffff !important;
-            }
-            
-            /* SIDEBAR DARK */
-            [data-testid="stSidebar"] {
+            /* SIDEBAR BACKGROUND */
+            section[data-testid="stSidebar"] {
                 background-color: #262730 !important;
             }
-            [data-testid="stSidebar"] * {
+            
+            /* METRICS (Values & Labels) */
+            [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
                 color: #ffffff !important;
             }
             
-            /* BUTTONS - DARK MODE STYLE */
+            /* BUTTONS (Enabled) */
             .stButton > button {
-                background-color: #4CAF50;
-                color: white;
-                border-radius: 20px;
+                background-color: #4CAF50 !important;
+                color: white !important;
                 border: none;
             }
-            .stButton > button:hover {
-                background-color: #45a049;
-                color: white;
+            
+            /* DISABLED BUTTONS (Badges) */
+            button:disabled {
+                background-color: #333333 !important;
+                color: #888888 !important;
             }
             </style>
             """,
             unsafe_allow_html=True,
         )
+        
+    # ------------------ LIGHT MODE (Default) ------------------
     else:
         st.markdown(
             """
             <style>
-            /* MAIN BACKGROUND - LIGHT */
+            /* MAIN APP BACKGROUND */
             .stApp {
                 background-color: #ffffff;
-                color: #000000;
             }
             
-            /* GENERAL TEXT BLACK */
-            h1, h2, h3, h4, h5, h6, p, li, label, .stMarkdown, span, div {
+            /* GLOBAL TEXT COLOR - Force Black */
+            h1, h2, h3, h4, h5, h6, p, li, span, div, label, .stMarkdown {
                 color: #000000 !important;
             }
             
-            /* === THE METRIC FIX === */
-            [data-testid="stMetric"] * {
-                color: #000000 !important;
-            }
-
-            /* === THE SIDEBAR FIX === */
-            [data-testid="stSidebar"] {
+            /* FORCE SIDEBAR BACKGROUND TO LIGHT GREY (Overrides Dark System Theme) */
+            section[data-testid="stSidebar"] {
                 background-color: #f0f2f6 !important;
             }
-            /* Force ALL sidebar text to black */
-            [data-testid="stSidebar"] * {
-                color: #000000 !important;
-            }
-
-            /* FORCE INPUTS (Text Input, Number Input, Selectbox) TO BLACK */
-            input, .stSelectbox, .stNumberInput {
+            /* FORCE SIDEBAR TEXT TO BLACK */
+            section[data-testid="stSidebar"] * {
                 color: #000000 !important;
             }
             
-            /* Fix invisible placeholder text in inputs */
-            ::placeholder {
-                color: #555555 !important;
-                opacity: 1;
+            /* METRICS FIX: Force Labels and Values to Black */
+            [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+                color: #000000 !important;
+            }
+            /* Target the specific div inside metric value for robustness */
+            [data-testid="stMetricValue"] > div {
+                color: #000000 !important;
             }
 
-            /* KEEP BUTTON TEXT WHITE (Revert global black setting for buttons) */
-            button, button p {
-                color: #ffffff !important;
+            /* INPUT FIELDS: Text Black */
+            input, .stSelectbox, .stNumberInput, textarea {
+                color: #000000 !important;
             }
-
-            /* BUTTONS - LIGHT MODE STYLE */
+            
+            /* BUTTONS (Enabled) - Blue */
             .stButton > button {
-                background-color: #2563eb;
-                color: white;
-                border-radius: 20px;
+                background-color: #2563eb !important;
+                color: white !important;
                 border: none;
             }
-            .stButton > button:hover {
-                background-color: #1d4ed8;
-                color: white;
+            /* Target the p tag inside buttons to ensure it's white */
+            .stButton > button p {
+                color: white !important;
+            }
+            
+            /* DISABLED BUTTONS (Badges) - Fix for invisible text */
+            /* We force background to light grey and text to dark grey */
+            button:disabled {
+                background-color: #e0e0e0 !important;
+                color: #333333 !important;
+                border-color: #cccccc !important;
+                opacity: 1 !important;
+            }
+            button:disabled p {
+                color: #333333 !important;
             }
             </style>
             """,
             unsafe_allow_html=True,
         )
-
 
 # ===================== MAIN APP =====================
 
