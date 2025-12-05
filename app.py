@@ -46,7 +46,7 @@ def get_profile_file() -> str:
 def init_state():
     s = st.session_state
     if "profile_name" not in s:
-        s.profile_name = "Me"          # default profile
+        s.profile_name = "Me"           # default profile
     if "age_group" not in s:
         s.age_group = "Adult (14-64)"
     if "goal_ml" not in s:
@@ -391,6 +391,20 @@ def draw_turtle_image(percent: float) -> Image.Image:
     img = Image.new("RGBA", (320, 220), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
+    # --- ADDED: Background Glow for visibility in Dark Mode ---
+    # Draws a faint white circle behind the turtle so it pops on dark backgrounds
+    if s.dark_mode:
+        glow_radius = 90
+        center_x, center_y = 160, 110
+        d.ellipse(
+            [
+                (center_x - glow_radius, center_y - glow_radius),
+                (center_x + glow_radius, center_y + glow_radius),
+            ],
+            fill=(255, 255, 255, 30) 
+        )
+    # ----------------------------------------------------------
+
     # water level
     water_top = int(170 - 100 * min(1.0, p))
     d.rectangle([0, water_top, 320, 220], fill=(200, 230, 255, 255))
@@ -518,27 +532,32 @@ def apply_dark_mode():
         st.markdown(
             """
             <style>
+            /* MAIN BACKGROUND - DARK */
             .stApp {
-                background-color: #020617;
-                color: #f9fafb;
-            }
-            .block-container {
-                padding-top: 2rem;
-                padding-bottom: 2rem;
-            }
-
-            /* BUTTONS - DARK MODE */
-            .stButton > button {
-                background-color: #2563eb;
+                background-color: #0e1117;
                 color: #ffffff;
-                border-radius: 9999px;
-                border: 0px;
-                padding: 0.35rem 0.9rem;
-                font-weight: 500;
+            }
+            
+            /* FORCE TEXT COLORS TO WHITE */
+            h1, h2, h3, h4, h5, h6, p, li, span, div {
+                color: #ffffff !important;
+            }
+            
+            /* STREAMLIT WIDGET LABELS & INPUTS */
+            .stMarkdown, .stRadio label, .stCheckbox label, .stNumberInput label, .stTextInput label, .stSelectbox label {
+                color: #ffffff !important;
+            }
+            
+            /* BUTTONS - DARK MODE STYLE */
+            .stButton > button {
+                background-color: #4CAF50;
+                color: white;
+                border-radius: 20px;
+                border: none;
             }
             .stButton > button:hover {
-                background-color: #1d4ed8;
-                color: #ffffff;
+                background-color: #45a049;
+                color: white;
             }
             </style>
             """,
@@ -548,27 +567,32 @@ def apply_dark_mode():
         st.markdown(
             """
             <style>
+            /* MAIN BACKGROUND - LIGHT */
             .stApp {
-                background-color: #f3f4f6;
-                color: #020617;
+                background-color: #ffffff;
+                color: #000000;
             }
-            .block-container {
-                padding-top: 2rem;
-                padding-bottom: 2rem;
+            
+            /* FORCE TEXT COLORS TO BLACK */
+            h1, h2, h3, h4, h5, h6, p, li, span {
+                color: #000000 !important;
+            }
+            
+            /* STREAMLIT WIDGET LABELS */
+            .stMarkdown, .stRadio label, .stCheckbox label, .stNumberInput label, .stTextInput label, .stSelectbox label {
+                color: #000000 !important;
             }
 
-            /* BUTTONS - LIGHT MODE */
+            /* BUTTONS - LIGHT MODE STYLE */
             .stButton > button {
                 background-color: #2563eb;
-                color: #ffffff;
-                border-radius: 9999px;
-                border: 0px;
-                padding: 0.35rem 0.9rem;
-                font-weight: 500;
+                color: white;
+                border-radius: 20px;
+                border: none;
             }
             .stButton > button:hover {
                 background-color: #1d4ed8;
-                color: #ffffff;
+                color: white;
             }
             </style>
             """,
